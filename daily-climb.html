@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Climb</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f1115">
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b22; --text:#eef0f3; --sub:#8b93a1;
+    --accent:#5ee0a0; --accent2:#3fb37f; --line:#242830; --danger:#e0685e;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    min-height:100vh; padding-bottom:80px;
+  }
+  .wrap{ max-width:420px; margin:0 auto; padding:24px 18px; }
+  header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .day{ font-size:13px; color:var(--sub); letter-spacing:.04em; text-transform:uppercase; }
+  .streak{ font-size:13px; color:var(--accent); }
+  h1{ font-size:24px; font-weight:600; margin:6px 0 10px; }
+
+  .badgerow{ display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .badge{ font-size:11px; background:var(--card); border:1px solid var(--accent); color:var(--accent); padding:4px 8px; border-radius:99px; }
+
+  .xpbar-wrap{ margin-bottom:20px; }
+  .xprow{ display:flex; justify-content:space-between; font-size:12px; color:var(--sub); margin-bottom:5px; }
+  .xptrack{ width:100%; height:8px; background:var(--line); border-radius:99px; overflow:hidden; }
+  .xpfill{ height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); border-radius:99px; transition:width .3s; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tab{ flex:1; text-align:center; padding:9px 0; border-radius:10px; font-size:13px; color:var(--sub); background:var(--card); border:1px solid var(--line); }
+  .tab.active{ color:var(--bg); background:var(--accent); border-color:var(--accent); font-weight:600; }
+
+  .card{
+    width:100%; background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:16px 18px; margin-bottom:12px; transition:box-shadow .3s;
+  }
+  .card.done{ opacity:.45; }
+  .card.done .name{ text-decoration:line-through; }
+  .card.highlight{ box-shadow:0 0 0 2px var(--accent); }
+  .crow{ display:flex; align-items:center; justify-content:space-between; }
+  .name{ font-size:16px; font-weight:500; }
+  .amt{ font-size:13px; color:var(--sub); margin-top:2px; }
+
+  .repbtn{
+    width:52px; height:52px; border-radius:50%; border:none; background:var(--accent);
+    color:var(--bg); font-size:22px; font-weight:700; flex-shrink:0;
+  }
+  .repbtn:active{ transform:scale(0.92); }
+  .repbtn[disabled]{ background:var(--line); color:var(--sub); }
+  .minus{ width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:transparent; color:var(--sub); font-size:16px; margin-right:8px; }
+
+  .timerrow{ display:flex; align-items:center; gap:10px; }
+  .timertext{ font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; min-width:56px; }
+  .tbtn{ padding:10px 16px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--text); font-size:14px; }
+  .tbtn.start{ background:var(--accent); color:var(--bg); border-color:var(--accent); font-weight:600; }
+
+  .status{ text-align:center; color:var(--sub); font-size:14px; margin:18px 0 8px; }
+  .status.win{ color:var(--accent); font-weight:600; }
+  .nextwrap{ text-align:center; margin-bottom:20px; }
+
+  .shopcard{ display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:12px; }
+  .shopname{ font-size:15px; font-weight:500; }
+  .shopdesc{ font-size:12px; color:var(--sub); margin-top:2px; max-width:220px; }
+  .buybtn{ padding:9px 14px; border-radius:10px; border:1px solid var(--accent); background:transparent; color:var(--accent); font-size:13px; font-weight:600; white-space:nowrap; }
+  .buybtn[disabled]{ border-color:var(--line); color:var(--sub); }
+  .buybtn.owned{ border-color:var(--line); color:var(--sub); }
+  .coinrow{ text-align:center; font-size:15px; color:var(--accent); font-weight:600; margin-bottom:16px; }
+  .shopgroup{ font-size:12px; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin:18px 0 8px; }
+
+  .statcard{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .statname{ font-size:14px; color:var(--sub); }
+  .statval{ font-size:20px; font-weight:700; }
+  .histrow{ display:flex; justify-content:space-between; font-size:13px; color:var(--sub); padding:8px 4px; border-bottom:1px solid var(--line); }
+  .histrow:last-child{ border-bottom:none; }
+
+  .footer{ text-align:center; color:var(--sub); font-size:12px; line-height:1.6; margin-top:24px; }
+  .modal{
+    position:fixed; inset:0; background:rgba(0,0,0,.75); display:none;
+    align-items:center; justify-content:center; z-index:10;
+  }
+  .modal.show{ display:flex; }
+  .mcard{ background:var(--card); border:1px solid var(--accent); border-radius:20px; padding:32px 28px; text-align:center; max-width:300px; }
+  .mcard h2{ color:var(--accent); font-size:22px; margin-bottom:8px; }
+  .mcard p{ color:var(--sub); font-size:14px; margin-bottom:18px; }
+  .mcard button{ padding:10px 24px; border-radius:10px; border:none; background:var(--accent); color:var(--bg); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="day" id="dayLabel">Workout #1</div>
+      <div class="streak" id="streakLabel"></div>
+    </div>
+    <div style="text-align:right;">
+      <div class="day">LEVEL <span id="levelNum">1</span></div>
+      <div class="day" id="titleLabel"></div>
+    </div>
+  </header>
+  <div class="badgerow" id="badgeRow"></div>
+  <h1>Today's climb</h1>
+
+  <div class="xpbar-wrap">
+    <div class="xprow"><span id="xpText">0 / 100 XP</span><span id="coinTextTop">0 coins</span></div>
+    <div class="xptrack"><div class="xpfill" id="xpFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tabWorkout" onclick="showTab('workout')">Workout</div>
+    <div class="tab" id="tabProgress" onclick="showTab('progress')">Progress</div>
+    <div class="tab" id="tabShop" onclick="showTab('shop')">Shop</div>
+  </div>
+
+  <div id="workoutView"></div>
+  <div class="status" id="status"></div>
+  <div class="nextwrap" id="nextWrap"></div>
+
+  <div id="progressView" style="display:none;"></div>
+
+  <div id="shopView" style="display:none;">
+    <div class="coinrow" id="coinRow">0 coins</div>
+    <div id="shopList"></div>
+  </div>
+
+  <div class="footer">No screen-time rewards. Everything here stays in the app.</div>
+</div>
+
+<div class="modal" id="levelupModal">
+  <div class="mcard">
+    <h2 id="luTitle">Level up!</h2>
+    <p id="luDesc"></p>
+    <button onclick="closeModal('levelupModal')">Nice</button>
+  </div>
+</div>
+
+<div class="modal" id="streakModal">
+  <div class="mcard">
+    <h2 id="srTitle">Streak reward!</h2>
+    <p id="srDesc"></p>
+    <button onclick="closeModal('streakModal')">Nice</button>
+  </div>
+</div>
+
+<script>
+/* ---------- sound ---------- */
+function playDing(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const alt = localStorage.getItem('cl_sound_alt') === '1';
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = alt ? 880 : 660;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.45);
+  }catch(e){}
+}
+
+/* ---------- calendar day (used only for the daily streak) ---------- */
+function startDay(){
+  let s = localStorage.getItem('cl_start');
+  if(!s){ s = Date.now(); localStorage.setItem('cl_start', s); }
+  return Math.floor((Date.now() - s) / 86400000) + 1;
+}
+const day = startDay();
+
+/* ---------- workout count (drives progression + can be advanced manually) ---------- */
+function getWorkoutCount(){
+  let c = localStorage.getItem('cl_workout_count');
+  if(!c){ c = 1; localStorage.setItem('cl_workout_count', c); }
+  return parseInt(c);
+}
+const workoutCount = getWorkoutCount();
+document.getElementById('dayLabel').textContent = 'Workout #' + workoutCount;
+function startNextWorkout(){
+  localStorage.setItem('cl_workout_count', workoutCount + 1);
+  location.reload();
+}
+
+/* ---------- progression: every 5 workouts, timers +5s, reps +1 to +4 ---------- */
+const milestone = Math.floor((workoutCount - 1) / 5);
+const REP_INC = [1,2,3,4];
+function repAmt(base, cap, idx){
+  const inc = REP_INC[idx % REP_INC.length];
+  return Math.min(cap, base + milestone * inc);
+}
+function timerAmt(base, cap){
+  return Math.min(cap, base + milestone * 5);
+}
+
+/* ---------- exercises ---------- */
+const EXS_RAW = [
+  {id:'pushups',   name:'Push-ups',            type:'reps',  base:6,  cap:30},
+  {id:'squats',    name:'Bodyweight squats',   type:'reps',  base:10, cap:45},
+  {id:'jumpsq',    name:'Explosive squats',    type:'reps',  base:5,  cap:25},
+  {id:'lunges',    name:'Lunges (each leg)',   type:'reps',  base:8,  cap:30},
+  {id:'calf',      name:'Calf raises',         type:'reps',  base:12, cap:50},
+  {id:'bridge',    name:'Glute bridges',       type:'reps',  base:10, cap:45},
+  {id:'dips',      name:'Bench dips (table)',  type:'reps',  base:6,  cap:30},
+  {id:'mtnclimb',  name:'Mountain climbers',   type:'reps',  base:12, cap:50},
+  {id:'jj',        name:'Jumping jacks',       type:'reps',  base:15, cap:60},
+  {id:'burpees',   name:'Burpees',             type:'reps',  base:4,  cap:20},
+  {id:'plank',     name:'Plank hold',          type:'timer', base:20, cap:90},
+  {id:'splankL',   name:'Side plank (left)',   type:'timer', base:15, cap:60},
+  {id:'splankR',   name:'Side plank (right)',  type:'timer', base:15, cap:60},
+  {id:'wallsit',   name:'Wall sit',            type:'timer', base:20, cap:90},
+  {id:'superman',  name:'Superman hold',       type:'timer', base:15, cap:60},
+];
+const EXS = EXS_RAW.map((ex, idx) => ({
+  ...ex,
+  amt: ex.type === 'reps' ? repAmt(ex.base, ex.cap, idx) : timerAmt(ex.base, ex.cap)
+}));
+// knee push-ups always match double the push-up count, inserted right after push-ups
+const pushIdx = EXS.findIndex(e => e.id === 'pushups');
+EXS.splice(pushIdx + 1, 0, {
+  id:'kneepush', name:'Knee push-ups', type:'reps', amt: EXS[pushIdx].amt * 2
+});
+
+/* ---------- per-workout progress storage ---------- */
+const progKey = 'cl_prog_workout_' + workoutCount;
+let prog = JSON.parse(localStorage.getItem(progKey) || '{}');
+function saveProg(){ localStorage.setItem(progKey, JSON.stringify(prog)); }
+
+/* ---------- lifetime totals ---------- */
+function addTotal(key, amount){
+  const v = parseInt(localStorage.getItem(key) || '0') + amount;
+  localStorage.setItem(key, v);
+  return v;
+}
+
+/* ---------- XP / level / coins ---------- */
+let xp = parseInt(localStorage.getItem('cl_xp') || '0');
+let coins = parseInt(localStorage.getItem('cl_coins') || '0');
+function levelFromXp(x){ return Math.floor(x/100) + 1; }
+function xpForLevel(l){ return (l-1)*100; }
+let level = levelFromXp(xp);
+
+const TITLES = {1:'Rookie',3:'Grinder',5:'Iron Vanguard',8:'Steel Climber',12:'Relentless',16:'Apex',20:'Legend'};
+function titleFor(l){
+  let best = 'Rookie';
+  Object.keys(TITLES).forEach(k => { if(l >= parseInt(k)) best = TITLES[k]; });
+  return best;
+}
+
+function addXp(amount){
+  const before = levelFromXp(xp);
+  xp += amount;
+  coins += Math.round(amount/2);
+  localStorage.setItem('cl_xp', xp);
+  localStorage.setItem('cl_coins', coins);
+  const after = levelFromXp(xp);
+  if(after > before){
+    level = after;
+    openLevelup(after);
+  }
+  renderXpBar();
+}
+
+function renderXpBar(){
+  level = levelFromXp(xp);
+  const base = xpForLevel(level), next = xpForLevel(level+1);
+  const pct = Math.round(((xp-base)/(next-base))*100);
+  document.getElementById('xpFill').style.width = pct + '%';
+  document.getElementById('xpText').textContent = (xp-base) + ' / ' + (next-base) + ' XP';
+  document.getElementById('coinTextTop').textContent = coins + ' coins';
+  document.getElementById('levelNum').textContent = level;
+  document.getElementById('titleLabel').textContent = titleFor(level);
+  document.getElementById('coinRow').textContent = coins + ' coins';
+}
+
+function openLevelup(l){
+  document.getElementById('luTitle').textContent = 'Level ' + l + '!';
+  document.getElementById('luDesc').textContent = 'Now ranked "' + titleFor(l) + '". Shop restocked with anything new you unlocked.';
+  document.getElementById('levelupModal').classList.add('show');
+  renderShop();
+}
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ---------- streak + streak rewards (tied to real calendar days) ---------- */
+const STREAK_MILESTONES = [3,7,14,30,60,100];
+function checkStreakReward(streak){
+  const claimed = JSON.parse(localStorage.getItem('cl_streak_claimed') || '[]');
+  STREAK_MILESTONES.forEach(m => {
+    if(streak >= m && claimed.indexOf(m) === -1){
+      claimed.push(m);
+      localStorage.setItem('cl_streak_claimed', JSON.stringify(claimed));
+      const bonusXp = m * 5, bonusCoins = m * 3;
+      xp += bonusXp; coins += bonusCoins;
+      localStorage.setItem('cl_xp', xp);
+      localStorage.setItem('cl_coins', coins);
+      const badges = JSON.parse(localStorage.getItem('cl_badges') || '[]');
+      badges.push(m);
+      localStorage.setItem('cl_badges', JSON.stringify(badges));
+      document.getElementById('srTitle').textContent = m + '-day streak!';
+      document.getElementById('srDesc').textContent = '+' + bonusXp + ' XP and +' + bonusCoins + ' coins. Badge added to your row.';
+      document.getElementById('streakModal').classList.add('show');
+      renderBadges();
+    }
+  });
+}
+function renderBadges(){
+  const shelf = localStorage.getItem('cl_badge_shelf') === '1';
+  const row = document.getElementById('badgeRow');
+  if(!shelf){ row.innerHTML = ''; return; }
+  const badges = JSON.parse(localStorage.getItem('cl_badges') || '[]');
+  row.innerHTML = badges.map(b => '<span class="badge">' + b + ' day</span>').join('');
+}
+function updateStreak(allDone){
+  const lastFullDay = parseInt(localStorage.getItem('cl_last_full_day') || '0');
+  let streak = parseInt(localStorage.getItem('cl_streak') || '0');
+  if(lastFullDay && day - lastFullDay > 1){
+    const tokens = parseInt(localStorage.getItem('cl_tokens') || '0');
+    if(tokens > 0){
+      localStorage.setItem('cl_tokens', tokens - 1);
+    } else {
+      streak = 0;
+    }
+  }
+  if(allDone && lastFullDay !== day){
+    streak += 1;
+    localStorage.setItem('cl_last_full_day', day);
+    localStorage.setItem('cl_streak', streak);
+    const longest = parseInt(localStorage.getItem('cl_longest_streak') || '0');
+    if(streak > longest) localStorage.setItem('cl_longest_streak', streak);
+    addXp(50);
+    checkStreakReward(streak);
+  }
+  const label = document.getElementById('streakLabel');
+  label.textContent = streak > 0 ? streak + ' day streak' : '';
+  renderBadges();
+}
+
+/* ---------- log each completed workout for the progress report ---------- */
+function maybeLogCompletion(allDone){
+  if(allDone && !prog._logged){
+    prog._logged = true;
+    saveProg();
+    const hist = JSON.parse(localStorage.getItem('cl_history') || '[]');
+    hist.push({workout: workoutCount, date: new Date().toISOString()});
+    while(hist.length > 50) hist.shift();
+    localStorage.setItem('cl_history', JSON.stringify(hist));
+  }
+}
+
+/* ---------- timers ---------- */
+const runningTimers = {};
+function startTimer(id){
+  if(runningTimers[id]) return;
+  const ex = EXS.find(e => e.id === id);
+  let remaining = ex.amt - (prog[id]?.elapsed || 0);
+  if(remaining <= 0) return;
+  runningTimers[id] = setInterval(() => {
+    remaining -= 1;
+    prog[id] = prog[id] || {};
+    prog[id].elapsed = ex.amt - remaining;
+    updateTimerDisplay(id, remaining);
+    if(remaining <= 0){
+      clearInterval(runningTimers[id]);
+      delete runningTimers[id];
+      playDing();
+      completeExercise(id);
+    }
+    saveProg();
+  }, 1000);
+}
+function pauseTimer(id){
+  if(runningTimers[id]){ clearInterval(runningTimers[id]); delete runningTimers[id]; }
+}
+function updateTimerDisplay(id, remaining){
+  const el = document.getElementById('timertext_' + id);
+  if(el) el.textContent = Math.max(0,remaining) + 's';
+}
+
+/* ---------- completion ---------- */
+function completeExercise(id){
+  if(prog[id]?.done) return;
+  const ex = EXS.find(e => e.id === id);
+  prog[id] = prog[id] || {};
+  prog[id].done = true;
+  saveProg();
+  addXp(10);
+  if(ex){
+    if(ex.type === 'reps') addTotal('cl_total_reps', ex.amt);
+    else addTotal('cl_total_seconds', ex.amt);
+  }
+  render();
+  goNext(true);
+}
+function isDone(ex){ return !!prog[ex.id]?.done; }
+
+/* ---------- next navigation ---------- */
+function goNext(silent){
+  const wrap = document.getElementById('nextWrap');
+  const next = EXS.find(ex => !isDone(ex));
+  if(!next){ return; }
+  const btn = wrap.querySelector('button');
+  const card = document.getElementById('card_' + next.id);
+  if(card){
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.add('highlight');
+    setTimeout(() => card.classList.remove('highlight'), 900);
+  }
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const view = document.getElementById('workoutView');
+  view.innerHTML = '';
+  EXS.forEach(ex => {
+    const done = isDone(ex);
+    const card = document.createElement('div');
+    card.className = 'card' + (done ? ' done' : '');
+    card.id = 'card_' + ex.id;
+
+    if(ex.type === 'reps'){
+      const count = prog[ex.id]?.count || 0;
+      card.innerHTML =
+        '<div class="crow">' +
+          '<div>' +
+            '<div class="name">' + ex.name + '</div>' +
+            '<div class="amt">' + count + ' / ' + ex.amt + ' reps</div>' +
+          '</div>' +
+          '<div style="display:flex; align-items:center;">' +
+            '<button class="minus" ' + (done?'disabled':'') + ' onclick="repChange(\'' + ex.id + '\',-1)">-</button>' +
+            '<button class="repbtn" ' + (done?'disabled':'') + ' onclick="repChange(\'' + ex.id + '\',1)">+1</button>' +
+          '</div>' +
+        '</div>';
+    } else {
+      const elapsed = prog[ex.id]?.elapsed || 0;
+      const remaining = Math.max(0, ex.amt - elapsed);
+      card.innerHTML =
+        '<div class="crow">' +
+          '<div>' +
+            '<div class="name">' + ex.name + '</div>' +
+            '<div class="amt">' + ex.amt + 's hold</div>' +
+          '</div>' +
+          '<div class="timerrow">' +
+            '<div class="timertext" id="timertext_' + ex.id + '">' + remaining + 's</div>' +
+            (done ? '' :
+              '<button class="tbtn start" onclick="startTimer(\'' + ex.id + '\')">Start</button>' +
+              '<button class="tbtn" onclick="pauseTimer(\'' + ex.id + '\')">Pause</button>') +
+          '</div>' +
+        '</div>';
+    }
+    view.appendChild(card);
+  });
+
+  const status = document.getElementById('status');
+  const nextWrap = document.getElementById('nextWrap');
+  const allDone = EXS.every(isDone);
+  if(allDone){
+    status.textContent = 'Done. That is the whole climb today.';
+    status.classList.add('win');
+    nextWrap.innerHTML = '<button class="tbtn start" onclick="startNextWorkout()">Start next workout &#9656;</button>';
+  } else {
+    const doneCount = EXS.filter(isDone).length;
+    status.textContent = doneCount + '/' + EXS.length + ' complete';
+    status.classList.remove('win');
+    nextWrap.innerHTML = '<button class="tbtn start" onclick="goNext(false)">Next exercise &#9656;</button>';
+  }
+  maybeLogCompletion(allDone);
+  updateStreak(allDone);
+  renderXpBar();
+}
+
+function repChange(id, delta){
+  prog[id] = prog[id] || {count:0};
+  prog[id].count = Math.max(0, (prog[id].count||0) + delta);
+  const ex = EXS.find(e => e.id === id);
+  if(prog[id].count >= ex.amt){
+    prog[id].count = ex.amt;
+    saveProg();
+    playDing();
+    completeExercise(id);
+    return;
+  }
+  saveProg();
+  render();
+}
+
+/* ---------- progress report ---------- */
+function renderProgress(){
+  const view = document.getElementById('progressView');
+  const hist = JSON.parse(localStorage.getItem('cl_history') || '[]');
+  const totalReps = parseInt(localStorage.getItem('cl_total_reps') || '0');
+  const totalSeconds = parseInt(localStorage.getItem('cl_total_seconds') || '0');
+  const longest = parseInt(localStorage.getItem('cl_longest_streak') || '0');
+  const streak = parseInt(localStorage.getItem('cl_streak') || '0');
+
+  let html = '';
+  html += statCard('Workouts completed', hist.length);
+  html += statCard('Current streak', streak + (streak===1?' day':' days'));
+  html += statCard('Longest streak', longest + (longest===1?' day':' days'));
+  html += statCard('Total reps logged', totalReps);
+  html += statCard('Total hold time', Math.round(totalSeconds/60) + ' min');
+  html += statCard('Level', level + ' (' + titleFor(level) + ')');
+
+  html += '<div class="shopgroup">Recent workouts</div>';
+  const recent = hist.slice(-10).reverse();
+  if(recent.length === 0){
+    html += '<div class="histrow"><span>No workouts logged yet</span><span></span></div>';
+  } else {
+    recent.forEach(h => {
+      const d = new Date(h.date);
+      const label = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+      html += '<div class="histrow"><span>Workout #' + h.workout + '</span><span>' + label + '</span></div>';
+    });
+  }
+  view.innerHTML = html;
+}
+function statCard(name, val){
+  return '<div class="statcard"><span class="statname">' + name + '</span><span class="statval">' + val + '</span></div>';
+}
+
+/* ---------- shop ---------- */
+const SHOP_ITEMS = [
+  {id:'theme_ocean',   name:'Ocean theme',        desc:'Blue accent colour scheme',            cost:80,  type:'theme', group:'Themes', accent:'#4fb8e0', accent2:'#2f8bab'},
+  {id:'theme_sunset',  name:'Sunset theme',       desc:'Orange accent colour scheme',           cost:80,  type:'theme', group:'Themes', accent:'#ff9a5a', accent2:'#d9713a'},
+  {id:'theme_violet',  name:'Violet theme',       desc:'Purple accent colour scheme',           cost:120, type:'theme', group:'Themes', accent:'#b48cff', accent2:'#8a5fd9'},
+  {id:'theme_forest',  name:'Forest theme',       desc:'Deep green accent colour scheme',       cost:120, type:'theme', group:'Themes', accent:'#3fae62', accent2:'#276b3d'},
+  {id:'theme_crimson', name:'Crimson theme',      desc:'Red accent colour scheme',              cost:150, type:'theme', group:'Themes', accent:'#e0596b', accent2:'#a83c4a'},
+  {id:'sound_alt',     name:'Chime tone',         desc:'Swaps the timer ding for a chime',      cost:60,  type:'sound', group:'Sound'},
+  {id:'skip_token',    name:'Streak-save token',  desc:'Auto-protects your streak once if you miss a day', cost:150, type:'consumable', group:'Practical', repeatable:true},
+  {id:'badge_shelf',   name:'Badge shelf',        desc:'Displays your streak-reward badges up top', cost:100, type:'badge_unlock', group:'Practical'},
+  {id:'pack_advanced', name:'Advanced pack',      desc:'Unlocks diamond push-ups and pistol squat progressions', cost:200, type:'unlock', group:'Unlocks', requiresLevel:4},
+];
+function getOwned(){ return JSON.parse(localStorage.getItem('cl_owned') || '[]'); }
+function setOwned(arr){ localStorage.setItem('cl_owned', JSON.stringify(arr)); }
+function getTokens(){ return parseInt(localStorage.getItem('cl_tokens') || '0'); }
+
+function renderShop(){
+  const list = document.getElementById('shopList');
+  list.innerHTML = '';
+  const owned = getOwned();
+  let lastGroup = null;
+  SHOP_ITEMS.forEach(item => {
+    if(item.requiresLevel && level < item.requiresLevel) return;
+    if(item.group !== lastGroup){
+      lastGroup = item.group;
+      const h = document.createElement('div');
+      h.className = 'shopgroup';
+      h.textContent = lastGroup;
+      list.appendChild(h);
+    }
+    const isOwned = !item.repeatable && owned.indexOf(item.id) !== -1;
+    const div = document.createElement('div');
+    div.className = 'shopcard';
+    let btnLabel = item.cost + ' coins';
+    if(item.repeatable) btnLabel = item.cost + ' coins (' + getTokens() + ' held)';
+    if(isOwned) btnLabel = 'Owned';
+    div.innerHTML =
+      '<div>' +
+        '<div class="shopname">' + item.name + '</div>' +
+        '<div class="shopdesc">' + item.desc + '</div>' +
+      '</div>' +
+      '<button class="buybtn ' + (isOwned?'owned':'') + '" ' +
+        ((isOwned || coins < item.cost) && !item.repeatable ? 'disabled' : '') +
+        ' onclick="buyItem(\'' + item.id + '\')">' + btnLabel + '</button>';
+    list.appendChild(div);
+  });
+}
+function buyItem(id){
+  const item = SHOP_ITEMS.find(i => i.id === id);
+  if(coins < item.cost) return;
+  const owned = getOwned();
+  if(!item.repeatable && owned.indexOf(id) !== -1) return;
+  coins -= item.cost;
+  localStorage.setItem('cl_coins', coins);
+  if(item.type === 'theme'){
+    owned.push(id); setOwned(owned);
+    applyTheme(item.accent, item.accent2);
+    localStorage.setItem('cl_theme_accent', item.accent);
+    localStorage.setItem('cl_theme_accent2', item.accent2);
+  } else if(item.type === 'unlock'){
+    owned.push(id); setOwned(owned);
+  } else if(item.type === 'sound'){
+    owned.push(id); setOwned(owned);
+    localStorage.setItem('cl_sound_alt', '1');
+  } else if(item.type === 'badge_unlock'){
+    owned.push(id); setOwned(owned);
+    localStorage.setItem('cl_badge_shelf', '1');
+    renderBadges();
+  } else if(item.type === 'consumable'){
+    localStorage.setItem('cl_tokens', getTokens()+1);
+  }
+  renderXpBar();
+  renderShop();
+}
+function applyTheme(accent, accent2){
+  document.documentElement.style.setProperty('--accent', accent);
+  document.documentElement.style.setProperty('--accent2', accent2);
+}
+(function loadTheme(){
+  const a = localStorage.getItem('cl_theme_accent'), a2 = localStorage.getItem('cl_theme_accent2');
+  if(a && a2) applyTheme(a, a2);
+})();
+
+/* ---------- tabs ---------- */
+function showTab(tab){
+  document.getElementById('tabWorkout').classList.toggle('active', tab==='workout');
+  document.getElementById('tabProgress').classList.toggle('active', tab==='progress');
+  document.getElementById('tabShop').classList.toggle('active', tab==='shop');
+  document.getElementById('workoutView').style.display = tab==='workout' ? '' : 'none';
+  document.getElementById('status').style.display = tab==='workout' ? '' : 'none';
+  document.getElementById('nextWrap').style.display = tab==='workout' ? '' : 'none';
+  document.getElementById('progressView').style.display = tab==='progress' ? '' : 'none';
+  document.getElementById('shopView').style.display = tab==='shop' ? '' : 'none';
+  if(tab==='shop') renderShop();
+  if(tab==='progress') renderProgress();
+}
+
+renderBadges();
+render();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
